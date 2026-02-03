@@ -325,18 +325,8 @@ public sealed class Game1 : Game
 
                 if (dist <= radius)
                 {
-                    // 添加简单的光照效果
-                    float light = 1f - (dist / radius) * 0.3f;
-                    // 上方更亮
-                    light += (center - y) / size * 0.2f;
-                    light = Math.Clamp(light, 0.7f, 1.2f);
-
-                    data[y * size + x] = new Color(
-                        (byte)Math.Clamp(color.R * light, 0, 255),
-                        (byte)Math.Clamp(color.G * light, 0, 255),
-                        (byte)Math.Clamp(color.B * light, 0, 255),
-                        (byte)255
-                    );
+                    // 纯色填充，无光照效果
+                    data[y * size + x] = color;
                 }
                 else if (dist <= radius + 1f)
                 {
@@ -353,6 +343,177 @@ public sealed class Game1 : Game
 
         texture.SetData(data);
         return texture;
+    }
+
+    /// <summary>
+    /// 一键生成所有贴图文件到 Content/Textures 目录
+    /// </summary>
+    public void GenerateAllTextures()
+    {
+        string basePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "Textures");
+        string tilesPath = Path.Combine(basePath, "Tiles");
+        string itemsPath = Path.Combine(basePath, "Items");
+
+        // 创建目录
+        Directory.CreateDirectory(tilesPath);
+        Directory.CreateDirectory(itemsPath);
+
+        // 建筑贴图配置
+        var tileConfigs = new Dictionary<TileType, (Color fill, Color border)>
+        {
+            { TileType.Empty, (new Color(65, 70, 75), new Color(45, 48, 52)) },
+            { TileType.Conveyor, (new Color(85, 105, 125), new Color(60, 75, 95)) },
+            { TileType.FastConveyor, (new Color(95, 115, 140), new Color(70, 85, 105)) },
+            { TileType.Splitter, (new Color(90, 110, 135), new Color(65, 80, 100)) },
+            { TileType.Merger, (new Color(85, 110, 125), new Color(60, 80, 95)) },
+            { TileType.Router, (new Color(100, 115, 140), new Color(70, 85, 105)) },
+            { TileType.Miner, (new Color(95, 120, 95), new Color(65, 85, 65)) },
+            { TileType.Smelter, (new Color(140, 110, 85), new Color(100, 75, 60)) },
+            { TileType.Assembler, (new Color(115, 100, 130), new Color(80, 65, 95)) },
+            { TileType.Lab, (new Color(90, 120, 130), new Color(65, 90, 100)) },
+            { TileType.Generator, (new Color(130, 130, 100), new Color(95, 95, 70)) },
+            { TileType.Storage, (new Color(120, 115, 85), new Color(85, 80, 60)) },
+            { TileType.UndergroundEntry, (new Color(75, 95, 115), new Color(55, 70, 85)) },
+            { TileType.UndergroundExit, (new Color(75, 95, 115), new Color(55, 70, 85)) },
+            { TileType.CoalGenerator, (new Color(100, 90, 75), new Color(70, 60, 50)) },
+            { TileType.AdvancedMiner, (new Color(105, 130, 105), new Color(75, 95, 75)) },
+            { TileType.AssemblerMk2, (new Color(125, 105, 140), new Color(90, 75, 105)) },
+            { TileType.ChemicalPlant, (new Color(105, 135, 115), new Color(75, 100, 85)) },
+        };
+
+        // 生成建筑贴图
+        foreach (var (tileType, colors) in tileConfigs)
+        {
+            string filePath = Path.Combine(tilesPath, $"{tileType}.png");
+            SaveDiamondTexture(filePath, TileWidth, TileHeight, colors.fill, colors.border, 0.06f);
+        }
+
+        // 物品贴图配置
+        var itemConfigs = new Dictionary<ItemType, Color>
+        {
+            { ItemType.Ore, new Color(120, 140, 160) },           // 铁矿石 - 蓝灰色
+            { ItemType.Plate, new Color(180, 190, 200) },         // 铁板 - 银色
+            { ItemType.Gear, new Color(200, 180, 140) },          // 齿轮 - 金属黄
+            { ItemType.Science, new Color(100, 180, 220) },       // 科学包 - 蓝色
+            { ItemType.CopperOre, new Color(180, 100, 60) },      // 铜矿石 - 橙棕色
+            { ItemType.CopperPlate, new Color(220, 140, 80) },    // 铜板 - 铜色
+            { ItemType.Coal, new Color(50, 50, 55) },             // 煤炭 - 黑色
+            { ItemType.GoldOre, new Color(200, 170, 50) },        // 金矿石 - 暗金色
+            { ItemType.GoldPlate, new Color(255, 215, 0) },       // 金板 - 金色
+            { ItemType.TitaniumOre, new Color(160, 170, 180) },   // 钛矿石 - 银灰色
+            { ItemType.TitaniumPlate, new Color(200, 210, 220) }, // 钛板 - 亮银色
+            { ItemType.UraniumOre, new Color(80, 160, 80) },      // 铀矿石 - 暗绿色
+            { ItemType.UraniumPlate, new Color(100, 220, 100) },  // 铀板 - 亮绿色
+            { ItemType.CopperWire, new Color(200, 120, 60) },     // 铜线 - 铜色
+            { ItemType.Circuit, new Color(60, 140, 60) },         // 电路板 - 绿色
+            { ItemType.Steel, new Color(160, 165, 170) },         // 钢材 - 钢灰色
+            { ItemType.RedScience, new Color(220, 80, 80) },      // 红色科学包
+            { ItemType.GreenScience, new Color(80, 200, 80) },    // 绿色科学包
+        };
+
+        // 生成物品贴图
+        foreach (var (itemType, color) in itemConfigs)
+        {
+            string filePath = Path.Combine(itemsPath, $"{itemType}.png");
+            SaveCircleTexture(filePath, 16, color);
+        }
+
+        System.Diagnostics.Debug.WriteLine($"贴图已生成到: {basePath}");
+    }
+
+    /// <summary>
+    /// 保存菱形贴图为PNG文件
+    /// </summary>
+    private void SaveDiamondTexture(string filePath, int width, int height, Color fill, Color border, float borderThickness)
+    {
+        Color[] data = new Color[width * height];
+        float halfW = width / 2f;
+        float halfH = height / 2f;
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                float dx = MathF.Abs(x - halfW) / halfW;
+                float dy = MathF.Abs(y - halfH) / halfH;
+                float distance = dx + dy;
+                if (distance <= 1f)
+                {
+                    float edge = 1f - distance;
+                    if (edge < borderThickness)
+                    {
+                        data[y * width + x] = border;
+                    }
+                    else
+                    {
+                        data[y * width + x] = fill;
+                    }
+                }
+                else
+                {
+                    data[y * width + x] = new Color(0, 0, 0, 0);
+                }
+            }
+        }
+
+        SaveColorArrayToPng(filePath, width, height, data);
+    }
+
+    /// <summary>
+    /// 保存圆形贴图为PNG文件
+    /// </summary>
+    private void SaveCircleTexture(string filePath, int size, Color color)
+    {
+        Color[] data = new Color[size * size];
+        float center = size / 2f;
+        float radius = size / 2f - 1f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - center;
+                float dy = y - center;
+                float dist = MathF.Sqrt(dx * dx + dy * dy);
+
+                if (dist <= radius)
+                {
+                    // 纯色填充
+                    data[y * size + x] = color;
+                }
+                else if (dist <= radius + 1f)
+                {
+                    // 边缘抗锯齿
+                    float alpha = 1f - (dist - radius);
+                    data[y * size + x] = new Color(color.R, color.G, color.B, (byte)(255 * alpha));
+                }
+                else
+                {
+                    data[y * size + x] = new Color(0, 0, 0, 0);
+                }
+            }
+        }
+
+        SaveColorArrayToPng(filePath, size, size, data);
+    }
+
+    /// <summary>
+    /// 将颜色数组保存为PNG文件
+    /// </summary>
+    private void SaveColorArrayToPng(string filePath, int width, int height, Color[] data)
+    {
+        using var bitmap = new System.Drawing.Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                Color c = data[y * width + x];
+                bitmap.SetPixel(x, y, System.Drawing.Color.FromArgb(c.A, c.R, c.G, c.B));
+            }
+        }
+
+        bitmap.Save(filePath, System.Drawing.Imaging.ImageFormat.Png);
     }
 
     protected override void Update(GameTime gameTime)
@@ -3070,7 +3231,7 @@ public sealed class Game1 : Game
         };
 
         int width = GetPanelWidth(lineTexts, 2, 32, 420);
-        int height = 260;
+        int height = 300;  // 增加高度以容纳新按钮
         int x = (viewport.Width - width) / 2;
         int y = (viewport.Height - height) / 2;
         var rect = new Rectangle(x, y, width, height);
@@ -3092,6 +3253,7 @@ public sealed class Game1 : Game
         DrawDevButton(buttons[1], T("DEV_ADD_CREDITS"));
         DrawDevButton(buttons[2], T("DEV_ADD_PLATES"));
         DrawDevButton(buttons[3], T("DEV_ADD_SCIENCE"));
+        DrawDevButton(buttons[4], "生成所有贴图 [T]");
 
         DrawText(T("DEV_HINTS"), new Vector2(x + 16, rect.Bottom - 28), 2, new Color(150, 160, 170));
     }
@@ -3137,7 +3299,8 @@ public sealed class Game1 : Game
             new Rectangle(startX, startY, buttonWidth, buttonHeight),
             new Rectangle(startX, startY + (buttonHeight + gap), buttonWidth, buttonHeight),
             new Rectangle(startX, startY + (buttonHeight + gap) * 2, buttonWidth, buttonHeight),
-            new Rectangle(startX, startY + (buttonHeight + gap) * 3, buttonWidth, buttonHeight)
+            new Rectangle(startX, startY + (buttonHeight + gap) * 3, buttonWidth, buttonHeight),
+            new Rectangle(startX, startY + (buttonHeight + gap) * 4, buttonWidth, buttonHeight)
         };
     }
 
@@ -3165,6 +3328,12 @@ public sealed class Game1 : Game
         if (_input.KeyPressed(Keys.W)) DevAddMaterials(50);
         if (_input.KeyPressed(Keys.E)) DevAddPlates(10);
         if (_input.KeyPressed(Keys.R)) DevAddScience(10);
+        if (_input.KeyPressed(Keys.T))
+        {
+            GenerateAllTextures();
+            _debugMessage = "贴图已生成到 Content/Textures 目录";
+            _debugMessageTimer = 3f;
+        }
 
         if (_input.LeftClicked)
         {
