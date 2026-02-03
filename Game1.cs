@@ -79,6 +79,7 @@ public sealed class Game1 : Game
     private SpriteBatch _spriteBatch = null!;
     private Texture2D _pixel = null!;
     private readonly Dictionary<TileType, Texture2D> _tileTextures = new();
+    private readonly Dictionary<ItemType, Texture2D> _itemTextures = new();
     private Texture2D _tileMask = null!;
     private SoundEffect _sfxPlace = null!;
     private SoundEffect _sfxRotate = null!;
@@ -203,31 +204,155 @@ public sealed class Game1 : Game
 
         _tileMask = CreateDiamondTexture(TileWidth, TileHeight, Color.White, new Color(0, 0, 0, 0), 0.05f);
 
-        // 更柔和的配色方案
-        _tileTextures[TileType.Empty] = CreateDiamondTexture(TileWidth, TileHeight, new Color(65, 70, 75), new Color(45, 48, 52), 0.06f);
-        _tileTextures[TileType.Conveyor] = CreateDiamondTexture(TileWidth, TileHeight, new Color(85, 105, 125), new Color(60, 75, 95), 0.06f);
-        _tileTextures[TileType.FastConveyor] = CreateDiamondTexture(TileWidth, TileHeight, new Color(95, 115, 140), new Color(70, 85, 105), 0.06f);
-        _tileTextures[TileType.Splitter] = CreateDiamondTexture(TileWidth, TileHeight, new Color(90, 110, 135), new Color(65, 80, 100), 0.06f);
-        _tileTextures[TileType.Merger] = CreateDiamondTexture(TileWidth, TileHeight, new Color(85, 110, 125), new Color(60, 80, 95), 0.06f);
-        _tileTextures[TileType.Router] = CreateDiamondTexture(TileWidth, TileHeight, new Color(100, 115, 140), new Color(70, 85, 105), 0.06f);
-        _tileTextures[TileType.Miner] = CreateDiamondTexture(TileWidth, TileHeight, new Color(95, 120, 95), new Color(65, 85, 65), 0.06f);
-        _tileTextures[TileType.Smelter] = CreateDiamondTexture(TileWidth, TileHeight, new Color(140, 110, 85), new Color(100, 75, 60), 0.06f);
-        _tileTextures[TileType.Assembler] = CreateDiamondTexture(TileWidth, TileHeight, new Color(115, 100, 130), new Color(80, 65, 95), 0.06f);
-        _tileTextures[TileType.Lab] = CreateDiamondTexture(TileWidth, TileHeight, new Color(90, 120, 130), new Color(65, 90, 100), 0.06f);
-        _tileTextures[TileType.Generator] = CreateDiamondTexture(TileWidth, TileHeight, new Color(130, 130, 100), new Color(95, 95, 70), 0.06f);
-        _tileTextures[TileType.Storage] = CreateDiamondTexture(TileWidth, TileHeight, new Color(120, 115, 85), new Color(85, 80, 60), 0.06f);
-        // 新增建筑纹理
-        _tileTextures[TileType.UndergroundEntry] = CreateDiamondTexture(TileWidth, TileHeight, new Color(75, 95, 115), new Color(55, 70, 85), 0.06f);
-        _tileTextures[TileType.UndergroundExit] = CreateDiamondTexture(TileWidth, TileHeight, new Color(75, 95, 115), new Color(55, 70, 85), 0.06f);
-        _tileTextures[TileType.CoalGenerator] = CreateDiamondTexture(TileWidth, TileHeight, new Color(100, 90, 75), new Color(70, 60, 50), 0.06f);
-        _tileTextures[TileType.AdvancedMiner] = CreateDiamondTexture(TileWidth, TileHeight, new Color(105, 130, 105), new Color(75, 95, 75), 0.06f);
-        _tileTextures[TileType.AssemblerMk2] = CreateDiamondTexture(TileWidth, TileHeight, new Color(125, 105, 140), new Color(90, 75, 105), 0.06f);
-        _tileTextures[TileType.ChemicalPlant] = CreateDiamondTexture(TileWidth, TileHeight, new Color(105, 135, 115), new Color(75, 100, 85), 0.06f);
+        // 加载建筑贴图（优先从文件加载，否则使用程序化生成）
+        LoadTileTextures();
+
+        // 加载物品贴图
+        LoadItemTextures();
 
         _sfxPlace = CreateTone(520, 0.10f, 0.18f);
         _sfxRotate = CreateTone(420, 0.08f, 0.14f);
         _sfxError = CreateTone(220, 0.14f, 0.20f);
         _sfxUnlock = CreateTone(640, 0.16f, 0.20f);
+    }
+
+    private void LoadTileTextures()
+    {
+        string texturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "Textures", "Tiles");
+
+        // 建筑贴图配置：类型 -> (填充色, 边框色)
+        var tileConfigs = new Dictionary<TileType, (Color fill, Color border)>
+        {
+            { TileType.Empty, (new Color(65, 70, 75), new Color(45, 48, 52)) },
+            { TileType.Conveyor, (new Color(85, 105, 125), new Color(60, 75, 95)) },
+            { TileType.FastConveyor, (new Color(95, 115, 140), new Color(70, 85, 105)) },
+            { TileType.Splitter, (new Color(90, 110, 135), new Color(65, 80, 100)) },
+            { TileType.Merger, (new Color(85, 110, 125), new Color(60, 80, 95)) },
+            { TileType.Router, (new Color(100, 115, 140), new Color(70, 85, 105)) },
+            { TileType.Miner, (new Color(95, 120, 95), new Color(65, 85, 65)) },
+            { TileType.Smelter, (new Color(140, 110, 85), new Color(100, 75, 60)) },
+            { TileType.Assembler, (new Color(115, 100, 130), new Color(80, 65, 95)) },
+            { TileType.Lab, (new Color(90, 120, 130), new Color(65, 90, 100)) },
+            { TileType.Generator, (new Color(130, 130, 100), new Color(95, 95, 70)) },
+            { TileType.Storage, (new Color(120, 115, 85), new Color(85, 80, 60)) },
+            { TileType.UndergroundEntry, (new Color(75, 95, 115), new Color(55, 70, 85)) },
+            { TileType.UndergroundExit, (new Color(75, 95, 115), new Color(55, 70, 85)) },
+            { TileType.CoalGenerator, (new Color(100, 90, 75), new Color(70, 60, 50)) },
+            { TileType.AdvancedMiner, (new Color(105, 130, 105), new Color(75, 95, 75)) },
+            { TileType.AssemblerMk2, (new Color(125, 105, 140), new Color(90, 75, 105)) },
+            { TileType.ChemicalPlant, (new Color(105, 135, 115), new Color(75, 100, 85)) },
+        };
+
+        foreach (var (tileType, colors) in tileConfigs)
+        {
+            string filePath = Path.Combine(texturePath, $"{tileType}.png");
+            if (File.Exists(filePath))
+            {
+                // 从文件加载贴图
+                _tileTextures[tileType] = LoadTextureFromFile(filePath);
+            }
+            else
+            {
+                // 使用程序化生成
+                _tileTextures[tileType] = CreateDiamondTexture(TileWidth, TileHeight, colors.fill, colors.border, 0.06f);
+            }
+        }
+    }
+
+    private void LoadItemTextures()
+    {
+        string texturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "Textures", "Items");
+
+        // 物品贴图配置：类型 -> 颜色
+        var itemConfigs = new Dictionary<ItemType, Color>
+        {
+            { ItemType.Ore, new Color(120, 140, 160) },           // 铁矿石 - 蓝灰色
+            { ItemType.Plate, new Color(180, 190, 200) },         // 铁板 - 银色
+            { ItemType.Gear, new Color(200, 180, 140) },          // 齿轮 - 金属黄
+            { ItemType.Science, new Color(100, 180, 220) },       // 科学包 - 蓝色
+            { ItemType.CopperOre, new Color(180, 100, 60) },      // 铜矿石 - 橙棕色
+            { ItemType.CopperPlate, new Color(220, 140, 80) },    // 铜板 - 铜色
+            { ItemType.Coal, new Color(50, 50, 55) },             // 煤炭 - 黑色
+            { ItemType.GoldOre, new Color(200, 170, 50) },        // 金矿石 - 暗金色
+            { ItemType.GoldPlate, new Color(255, 215, 0) },       // 金板 - 金色
+            { ItemType.TitaniumOre, new Color(160, 170, 180) },   // 钛矿石 - 银灰色
+            { ItemType.TitaniumPlate, new Color(200, 210, 220) }, // 钛板 - 亮银色
+            { ItemType.UraniumOre, new Color(80, 160, 80) },      // 铀矿石 - 暗绿色
+            { ItemType.UraniumPlate, new Color(100, 220, 100) },  // 铀板 - 亮绿色
+            { ItemType.CopperWire, new Color(200, 120, 60) },     // 铜线 - 铜色
+            { ItemType.Circuit, new Color(60, 140, 60) },         // 电路板 - 绿色
+            { ItemType.Steel, new Color(160, 165, 170) },         // 钢材 - 钢灰色
+            { ItemType.RedScience, new Color(220, 80, 80) },      // 红色科学包
+            { ItemType.GreenScience, new Color(80, 200, 80) },    // 绿色科学包
+        };
+
+        foreach (var (itemType, color) in itemConfigs)
+        {
+            string filePath = Path.Combine(texturePath, $"{itemType}.png");
+            if (File.Exists(filePath))
+            {
+                // 从文件加载贴图
+                _itemTextures[itemType] = LoadTextureFromFile(filePath);
+            }
+            else
+            {
+                // 使用程序化生成圆形物品贴图
+                _itemTextures[itemType] = CreateItemTexture(16, color);
+            }
+        }
+    }
+
+    private Texture2D LoadTextureFromFile(string filePath)
+    {
+        using var stream = File.OpenRead(filePath);
+        return Texture2D.FromStream(GraphicsDevice, stream);
+    }
+
+    private Texture2D CreateItemTexture(int size, Color color)
+    {
+        var texture = new Texture2D(GraphicsDevice, size, size);
+        Color[] data = new Color[size * size];
+        float center = size / 2f;
+        float radius = size / 2f - 1f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - center;
+                float dy = y - center;
+                float dist = MathF.Sqrt(dx * dx + dy * dy);
+
+                if (dist <= radius)
+                {
+                    // 添加简单的光照效果
+                    float light = 1f - (dist / radius) * 0.3f;
+                    // 上方更亮
+                    light += (center - y) / size * 0.2f;
+                    light = Math.Clamp(light, 0.7f, 1.2f);
+
+                    data[y * size + x] = new Color(
+                        (byte)Math.Clamp(color.R * light, 0, 255),
+                        (byte)Math.Clamp(color.G * light, 0, 255),
+                        (byte)Math.Clamp(color.B * light, 0, 255),
+                        (byte)255
+                    );
+                }
+                else if (dist <= radius + 1f)
+                {
+                    // 边缘抗锯齿
+                    float alpha = 1f - (dist - radius);
+                    data[y * size + x] = new Color(color.R, color.G, color.B, (byte)(255 * alpha));
+                }
+                else
+                {
+                    data[y * size + x] = new Color(0, 0, 0, 0);
+                }
+            }
+        }
+
+        texture.SetData(data);
+        return texture;
     }
 
     protected override void Update(GameTime gameTime)
@@ -2288,10 +2413,23 @@ public sealed class Game1 : Game
                 elevation = GetElevation(_tiles[item.Tile.X, item.Tile.Y].Type) * _camera.Zoom;
             }
             pos -= new Vector2(0f, elevation);
-            float size = 10f * _camera.Zoom;
-            _spriteBatch.Draw(_pixel, new Rectangle((int)(pos.X - size / 2f + 3f * _camera.Zoom), (int)(pos.Y - size / 2f + 4f * _camera.Zoom), (int)size, (int)size), new Color(0, 0, 0, 60));
-            Color color = GetItemColor(item.Type);
-            _spriteBatch.Draw(_pixel, new Rectangle((int)(pos.X - size / 2f), (int)(pos.Y - size / 2f), (int)size, (int)size), color);
+            float size = 12f * _camera.Zoom;
+
+            // 使用贴图渲染物品
+            if (_itemTextures.TryGetValue(item.Type, out var texture))
+            {
+                // 绘制阴影
+                _spriteBatch.Draw(texture, pos + new Vector2(2f, 3f) * _camera.Zoom, null, new Color(0, 0, 0, 80), 0f, new Vector2(8, 8), _camera.Zoom * 0.75f, SpriteEffects.None, 0f);
+                // 绘制物品
+                _spriteBatch.Draw(texture, pos, null, Color.White, 0f, new Vector2(8, 8), _camera.Zoom * 0.75f, SpriteEffects.None, 0f);
+            }
+            else
+            {
+                // 后备：使用矩形
+                _spriteBatch.Draw(_pixel, new Rectangle((int)(pos.X - size / 2f + 3f * _camera.Zoom), (int)(pos.Y - size / 2f + 4f * _camera.Zoom), (int)size, (int)size), new Color(0, 0, 0, 60));
+                Color color = GetItemColor(item.Type);
+                _spriteBatch.Draw(_pixel, new Rectangle((int)(pos.X - size / 2f), (int)(pos.Y - size / 2f), (int)size, (int)size), color);
+            }
         }
     }
 
@@ -2345,18 +2483,26 @@ public sealed class Game1 : Game
                 float elevation = GetElevation(tile.Type) * _camera.Zoom;
                 screenPos -= new Vector2(0f, elevation);
 
-                float size = 10f * _camera.Zoom;
-
-                // 绘制阴影
-                _spriteBatch.Draw(_pixel,
-                    new Rectangle((int)(screenPos.X - size / 2f + 3f * _camera.Zoom), (int)(screenPos.Y - size / 2f + 4f * _camera.Zoom), (int)size, (int)size),
-                    new Color(0, 0, 0, 60));
-
-                // 绘制物品
-                Color color = GetItemColor(itemType);
-                _spriteBatch.Draw(_pixel,
-                    new Rectangle((int)(screenPos.X - size / 2f), (int)(screenPos.Y - size / 2f), (int)size, (int)size),
-                    color);
+                // 使用贴图渲染物品
+                if (_itemTextures.TryGetValue(itemType, out var texture))
+                {
+                    // 绘制阴影
+                    _spriteBatch.Draw(texture, screenPos + new Vector2(2f, 3f) * _camera.Zoom, null, new Color(0, 0, 0, 80), 0f, new Vector2(8, 8), _camera.Zoom * 0.75f, SpriteEffects.None, 0f);
+                    // 绘制物品
+                    _spriteBatch.Draw(texture, screenPos, null, Color.White, 0f, new Vector2(8, 8), _camera.Zoom * 0.75f, SpriteEffects.None, 0f);
+                }
+                else
+                {
+                    // 后备：使用矩形
+                    float size = 10f * _camera.Zoom;
+                    _spriteBatch.Draw(_pixel,
+                        new Rectangle((int)(screenPos.X - size / 2f + 3f * _camera.Zoom), (int)(screenPos.Y - size / 2f + 4f * _camera.Zoom), (int)size, (int)size),
+                        new Color(0, 0, 0, 60));
+                    Color color = GetItemColor(itemType);
+                    _spriteBatch.Draw(_pixel,
+                        new Rectangle((int)(screenPos.X - size / 2f), (int)(screenPos.Y - size / 2f), (int)size, (int)size),
+                        color);
+                }
             }
         }
     }
