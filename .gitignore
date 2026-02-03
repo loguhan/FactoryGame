@@ -1,0 +1,7 @@
+bin/
+obj/
+*.backup
+.vs/
+*.user
+*.suo
+.claude/
