@@ -218,7 +218,10 @@ public sealed class Game1 : Game
 
     private void LoadTileTextures()
     {
-        string texturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "Textures", "Tiles");
+        // 优先从项目目录加载，其次从运行时目录加载
+        string projectPath = @"C:\Users\Administrator\Desktop\新建文件夹\fna\Content\Textures\Tiles";
+        string runtimePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "Textures", "Tiles");
+        string texturePath = Directory.Exists(projectPath) ? projectPath : runtimePath;
 
         // 建筑贴图配置：类型 -> (填充色, 边框色)
         var tileConfigs = new Dictionary<TileType, (Color fill, Color border)>
@@ -261,7 +264,10 @@ public sealed class Game1 : Game
 
     private void LoadItemTextures()
     {
-        string texturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "Textures", "Items");
+        // 优先从项目目录加载，其次从运行时目录加载
+        string projectPath = @"C:\Users\Administrator\Desktop\新建文件夹\fna\Content\Textures\Items";
+        string runtimePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "Textures", "Items");
+        string texturePath = Directory.Exists(projectPath) ? projectPath : runtimePath;
 
         // 物品贴图配置：类型 -> 颜色
         var itemConfigs = new Dictionary<ItemType, Color>
@@ -312,31 +318,26 @@ public sealed class Game1 : Game
     {
         var texture = new Texture2D(GraphicsDevice, size, size);
         Color[] data = new Color[size * size];
-        float center = size / 2f;
-        float radius = size / 2f - 1f;
+        int border = 1; // 边框宽度
 
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
             {
-                float dx = x - center;
-                float dy = y - center;
-                float dist = MathF.Sqrt(dx * dx + dy * dy);
-
-                if (dist <= radius)
+                // 方形填充，带1像素边框
+                if (x >= border && x < size - border && y >= border && y < size - border)
                 {
-                    // 纯色填充，无光照效果
                     data[y * size + x] = color;
-                }
-                else if (dist <= radius + 1f)
-                {
-                    // 边缘抗锯齿
-                    float alpha = 1f - (dist - radius);
-                    data[y * size + x] = new Color(color.R, color.G, color.B, (byte)(255 * alpha));
                 }
                 else
                 {
-                    data[y * size + x] = new Color(0, 0, 0, 0);
+                    // 边框颜色（稍暗）
+                    data[y * size + x] = new Color(
+                        (byte)(color.R * 0.6f),
+                        (byte)(color.G * 0.6f),
+                        (byte)(color.B * 0.6f),
+                        (byte)255
+                    );
                 }
             }
         }
@@ -350,7 +351,9 @@ public sealed class Game1 : Game
     /// </summary>
     public void GenerateAllTextures()
     {
-        string basePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "Textures");
+        // 生成到项目根目录的 Content/Textures
+        string projectRoot = @"C:\Users\Administrator\Desktop\新建文件夹\fna";
+        string basePath = Path.Combine(projectRoot, "Content", "Textures");
         string tilesPath = Path.Combine(basePath, "Tiles");
         string itemsPath = Path.Combine(basePath, "Items");
 
@@ -415,7 +418,7 @@ public sealed class Game1 : Game
         foreach (var (itemType, color) in itemConfigs)
         {
             string filePath = Path.Combine(itemsPath, $"{itemType}.png");
-            SaveCircleTexture(filePath, 16, color);
+            SaveSquareTexture(filePath, 16, color);
         }
 
         System.Diagnostics.Debug.WriteLine($"贴图已生成到: {basePath}");
@@ -460,36 +463,31 @@ public sealed class Game1 : Game
     }
 
     /// <summary>
-    /// 保存圆形贴图为PNG文件
+    /// 保存方形贴图为PNG文件
     /// </summary>
-    private void SaveCircleTexture(string filePath, int size, Color color)
+    private void SaveSquareTexture(string filePath, int size, Color color)
     {
         Color[] data = new Color[size * size];
-        float center = size / 2f;
-        float radius = size / 2f - 1f;
+        int border = 1; // 边框宽度
 
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
             {
-                float dx = x - center;
-                float dy = y - center;
-                float dist = MathF.Sqrt(dx * dx + dy * dy);
-
-                if (dist <= radius)
+                // 方形填充，带1像素边框
+                if (x >= border && x < size - border && y >= border && y < size - border)
                 {
-                    // 纯色填充
                     data[y * size + x] = color;
-                }
-                else if (dist <= radius + 1f)
-                {
-                    // 边缘抗锯齿
-                    float alpha = 1f - (dist - radius);
-                    data[y * size + x] = new Color(color.R, color.G, color.B, (byte)(255 * alpha));
                 }
                 else
                 {
-                    data[y * size + x] = new Color(0, 0, 0, 0);
+                    // 边框颜色（稍暗）
+                    data[y * size + x] = new Color(
+                        (byte)(color.R * 0.6f),
+                        (byte)(color.G * 0.6f),
+                        (byte)(color.B * 0.6f),
+                        (byte)255
+                    );
                 }
             }
         }
@@ -991,6 +989,10 @@ public sealed class Game1 : Game
             if (_storages.TryGetValue(nextTile, out var storage))
             {
                 storage.Count++;
+                // 添加到材料库存
+                AddToInventory(itemType, 1);
+                // 更新统计
+                UpdateStorageStats(itemType);
                 return true;
             }
             return false;
@@ -5167,6 +5169,55 @@ public sealed class Game1 : Game
         if (!_inventory.ContainsKey(item))
             _inventory[item] = 0;
         _inventory[item] += count;
+    }
+
+    /// <summary>
+    /// 更新仓库存储统计
+    /// </summary>
+    private void UpdateStorageStats(ItemType itemType)
+    {
+        switch (itemType)
+        {
+            case ItemType.Plate:
+                _totalPlatesStored += 1;
+                _plateDeliveries.Enqueue(_elapsed);
+                break;
+            case ItemType.Gear:
+                _totalGearStored += 1;
+                break;
+            case ItemType.Science:
+                _totalScienceStored += 1;
+                _researchPoints += 1;
+                _scienceDeliveries.Enqueue(_elapsed);
+                CheckResearchUnlocks();
+                break;
+            case ItemType.Ore:
+                _totalOreStored += 1;
+                break;
+            case ItemType.CopperPlate:
+                _totalCopperStored += 1;
+                break;
+            case ItemType.Coal:
+                _totalCoalStored += 1;
+                break;
+            case ItemType.Circuit:
+                _totalCircuitStored += 1;
+                _researchPoints += 2;
+                CheckResearchUnlocks();
+                break;
+            case ItemType.Steel:
+                _totalSteelStored += 1;
+                break;
+            case ItemType.RedScience:
+                _researchPoints += 3;
+                CheckResearchUnlocks();
+                break;
+            case ItemType.GreenScience:
+                _researchPoints += 5;
+                CheckResearchUnlocks();
+                break;
+        }
+        CheckAchievements();
     }
 
     private string GetToolTooltip(Tool tool)
